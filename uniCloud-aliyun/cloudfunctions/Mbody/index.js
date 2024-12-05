@@ -1,6 +1,6 @@
 const db = uniCloud.database();
 
-exports.main = async (event, context) => {
+exports.main = async (event, context) => {	
 	//trunk
 	if (event.api === 'trunk_submitData') {
 		try {
@@ -175,7 +175,27 @@ exports.main = async (event, context) => {
 		}
 	}
 	
-	
-	
-	
+	if (event.api === 'limb_getMonthWorkouts') {
+	  try {
+	    const collection = db.collection('limb');
+	    const res = await collection
+	      .where({
+	        date: db.command.gte(event.startDate).and(db.command.lte(event.endDate))
+	      })
+	      .field({ date: true })
+	      .get();
+	    
+	    return {
+	      success: true,
+	      message: '获取记录成功',
+	      data: res.data
+	    };
+	  } catch (error) {
+	    return {
+	      success: false,
+	      message: '获取记录失败',
+	      error: error.message
+	    };
+	  }
+	}
 };

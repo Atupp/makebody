@@ -1,6 +1,6 @@
 <template>
 	<view class="content">
-		<image class="logo" src="/static/logo.png"></image>
+		<image class="running-man" src="../static/运动组.png"></image>
 		<view class="text-area">
 			<text class="title">{{title}}</text>
 		</view>
@@ -98,5 +98,12 @@
 		width: 40rpx;
 		height: 40rpx;
 		margin-right: 10rpx;
+	}
+
+	.running-man {
+		width: 400rpx;
+		height: 400rpx;
+		margin-top: 200rpx;
+		margin-bottom: 20rpx;
 	}
 </style>

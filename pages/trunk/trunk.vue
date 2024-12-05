@@ -43,7 +43,9 @@
 		<tr>
 		  <td>引体向上</td>
 		  <td><input type="number" v-model="weights.pullUp" class="weight-input"></td>
-		  <td colspan="2"><input type="number" v-model="reps.pullUp" class="reps-input"></td>
+		  <td colspan="2">
+			<input type="text" v-model="pullUpNote" class="note-input" placeholder="次数">
+		  </td>
 		  <td>1-2min</td>
 		  <td>组数自定</td>
 		</tr>
@@ -86,10 +88,10 @@
 	  </view>
 	</view>
   </template>
-  
-  <script>
-  export default {
-	name: 'Trunk',
+
+<script>
+	export default {
+		name: 'Trunk',
 	data() {
 	  return {
 		weights: {
@@ -118,11 +120,12 @@
 		currentYear: new Date().getFullYear(),
 		currentMonth: new Date().getMonth() + 1,
 		calendarDays: [],
-		workoutDays: [],
+		workoutDays: [], // 存储运动记录日期
+		pullUpNote: '', // 新增：用于记录引体向上的组数和次数
 	  }
 	},
 	methods: {
-		trunk_submitData() {
+        trunk_submitData() {
 		if (!this.selectedDate) {
 		  uni.showToast({
 			title: '请先选择日期',
@@ -145,7 +148,7 @@
 		}
 
 		// 创建时间戳
-		const selectedDateTime = new Date(this.selectedDate);		
+		const selectedDateTime = new Date(this.selectedDate);
 		selectedDateTime.setHours(12, 0, 0, 0);
 		const timestamp = selectedDateTime.toISOString();
 
@@ -154,15 +157,6 @@
 		  content: `确定要提交 ${this.selectedDate} 的训练数据吗？`,
 		  success: (res) => {
 			if (res.confirm) {
-			  console.log('准备提交的数据:', {
-				api: 'trunk_submitData',
-				uni_weights: this.weights,
-				uni_sets: this.sets,
-				uni_reps: this.reps,
-				timestamp: timestamp,
-				date: this.selectedDate
-			  });
-
 			  uniCloud.callFunction({
 				name: 'Mbody',
 				data: {
@@ -173,17 +167,14 @@
 				  timestamp: timestamp,
 				  date: this.selectedDate
 				}
-			  }).then((res) => {
-				console.log('提交响应:', res);
-				if (!this.workoutDays.includes(this.selectedDate)) {
-				  this.workoutDays.push(this.selectedDate);
-				}
+			  }).then(() => {
+				this.getMonthWorkouts(); // 提交成功后刷新日历
 				uni.showToast({
 				  title: '提交成功',
 				  icon: 'success'
 				});
 			  }).catch(err => {
-				console.error('提交失败详细信息:', err);
+				console.error('提交失败:', err);
 				uni.showToast({
 				  title: '提交失败',
 				  icon: 'none'
@@ -193,8 +184,8 @@
 		  }
 		});
 	  },
-	  
-	   trunk_getLastRecord() {
+
+      trunk_getLastRecord() {
 		if (!this.selectedDate) {
 		  uni.showToast({
 			title: '请先选择日期',
@@ -241,6 +232,30 @@
 	  onDateChange(e) {
 		this.selectedDate = e.detail.value;
 	  },
+	  // 获取当月运动记录
+	  async getMonthWorkouts() {
+		try {
+		  const startDate = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-01`;
+		  const endDate = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-31`;
+		  
+		  const res = await uniCloud.callFunction({
+			name: 'Mbody',
+			data: {
+			  api: 'trunk_getMonthWorkouts',
+			  startDate: startDate,
+			  endDate: endDate
+			}
+		  });
+		  
+		  if (res.result && res.result.data) {
+			this.workoutDays = res.result.data.map(item => item.date);
+		  }
+		} catch (err) {
+		  console.error('获取月度记录失败:', err);
+		}
+	  },
+
+	  // 生成日历数据
 	  generateCalendar() {
 		const firstDay = new Date(this.currentYear, this.currentMonth - 1, 1);
 		const lastDay = new Date(this.currentYear, this.currentMonth, 0);
@@ -270,28 +285,6 @@
 		
 		this.calendarDays = days;
 	  },
-	  // 获取当月运动记录
-	  async getMonthWorkouts() {
-		try {
-		  const startDate = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-01`;
-		  const endDate = `${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}-31`;
-		  
-		  const res = await uniCloud.callFunction({
-			name: 'Mbody',
-			data: {
-			  api: 'trunk_getMonthWorkouts',
-			  startDate: startDate,
-			  endDate: endDate
-			}
-		  });
-		  
-		  if (res.result && res.result.data) {
-			this.workoutDays = res.result.data.map(item => item.date);
-		  }
-		} catch (err) {
-		  console.error('获取月度记录失败:', err);
-		}
-	  },
 	},
 	onShow() {
 	  this.generateCalendar();
@@ -312,21 +305,21 @@
 		}
 	  }
 	}
-  }
-  </script>
-  
-  <style>
+}
+</script>
+
+<style>
   .trunk-container {
 	padding: 6px;
   }
    /* 设置包含输入框的单元格背景色 */
-  .exercise-table td:nth-child(2),
+   .exercise-table td:nth-child(2),
   .exercise-table td:nth-child(3),
-  .exercise-table tr:nth-child(2) td:nth-child(4),
-  .exercise-table tr:nth-child(4) td:nth-child(4),
-  .exercise-table tr:nth-child(5) td:nth-child(4),
-  .exercise-table tr:nth-child(6) td:nth-child(4),
-  .exercise-table tr:nth-child(7) td:nth-child(4){
+  .exercise-table tr:nth-child(2)  :nth-child(4),
+  .exercise-table tr:nth-child(4)  :nth-child(4),
+  .exercise-table tr:nth-child(6)  :nth-child(4),
+  .exercise-table tr:nth-child(7)  :nth-child(4),
+  .exercise-table tr:nth-child(5)  :nth-child(4) {
     background-color: #f5f5f5;
 	font-size: 50%;
   }
@@ -345,47 +338,26 @@
 	padding: 2px;
 	text-align: center;
   }
+  
   /* 添加列宽控制 */
   .exercise-table th:nth-child(1) { width: 25%; }  /* 动作名称列 */
-  .exercise-table th:nth-child(2) { width: 15%; }
-  .exercise-table th:nth-child(3) { width: 12%; }
-  .exercise-table th:nth-child(4) { width: 12%; }
-  .exercise-table th:nth-child(5) { width: 15%; }
-  .exercise-table th:nth-child(6) { width: 21%; }
-  /* 输入框样式 */
+  .exercise-table th:nth-child(2) { width: 15%; }  /* 重量列 */
+  .exercise-table th:nth-child(3) { width: 12%; }  /* 组数列 */
+  .exercise-table th:nth-child(4) { width: 12%; }  /* 次数列 */
+  .exercise-table th:nth-child(5) { width: 15%; }  /* 间隔列 */
+  .exercise-table th:nth-child(6) { width: 21%; }  /* 备注列 */
+  
+  
+ 
+  
   .weight-input,
   .sets-input,
   .reps-input {
-	width: 100%;
-	padding: 0;
-	margin: 0;
+	width: 80%;
+	padding: 2px;
 	text-align: center;
-	border: none;
-	background-color: transparent;
-	font-size: 50%;
-	height: 100%;
-  }
-  .weight-input:focus,
-  .sets-input:focus,
-  .reps-input:focus {
-	border-color: #6ea6e7;
-	background-color: #fff;
-	outline: none;
-	box-shadow: 0 0 0 2px rgba(110, 166, 231, 0.1);
-  }
-  /* 间隔和备注列样式 */
-  .exercise-table td:nth-child(5),
-  .exercise-table td:last-child {
-	color: #999;
-	font-size: 12px;
-  }
-  /* 表格行悬停效果 */
-  .exercise-table tr:hover {
-	background-color: #f9f9f9;
-  }
-  /* 表格最后一行的底部边框 */
-  .exercise-table tr:last-child td {
-	border-bottom: none;
+	border-radius: 3px;
+	background-color: transparent;  /* 保持输入框背景透明 */
   }
   
   .button-container {
@@ -414,6 +386,7 @@
 	font-size: 14px;
   }
   
+  /* 添加日历相关样式 */
   .calendar-container {
 	margin: 10px 0;
 	padding: 10px;
@@ -421,27 +394,27 @@
 	border-radius: 8px;
 	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
-  
+
   .calendar-header {
 	text-align: center;
 	padding: 5px;
 	font-size: 14px;
 	font-weight: bold;
   }
-  
+
   .calendar-grid {
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
 	gap: 2px;
   }
-  
+
   .weekday {
 	text-align: center;
 	padding: 5px;
 	font-size: 12px;
 	color: #666;
   }
-  
+
   .calendar-day {
 	text-align: center;
 	padding: 5px;
@@ -452,7 +425,7 @@
 	width: 30px;
 	margin: auto;
   }
-  
+
   .has-workout {
 	background: rgba(0, 0, 0, 0.1);
 	color: #222222;
@@ -462,11 +435,11 @@
 	align-items: center;
 	justify-content: center;
   }
-  
+
   .current-month {
 	color: #333;
   }
-  
+
   .calendar-day:not(.current-month) {
 	color: #ccc;
   }
