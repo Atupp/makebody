@@ -1,0 +1,1 @@
+<view class="content"><image class="logo" src="{{a}}"></image><view class="text-area"><text class="title">{{b}}</text></view><view class="button-group"><button class="training-btn" bindtap="{{d}}"><image class="btn-icon" src="{{c}}"></image> 躯干训练 </button><button class="training-btn" bindtap="{{f}}"><image class="btn-icon" src="{{e}}"></image> 四肢训练 </button></view></view>
